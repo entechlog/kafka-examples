@@ -4,6 +4,7 @@
   - [Kafka Components](#kafka-components)
 - [Demo](#demo)
   - [Start docker containers](#start-docker-containers)
+  - [Kafka Broker](#kafka-broker)
   - [Kafka Producer](#kafka-producer)
   - [Kafka Stream Processsing (ksqlDB)](#kafka-stream-processsing-ksqldb)
   - [Kafka Consumer](#kafka-consumer)
@@ -15,6 +16,10 @@
 # Overview
 
 Welcome to your kafka demo workshop. In this demo we will try to cover the basics of kafka and will create an streaming elt pipline using ksqlDB.
+
+<p align="center">
+  <img src="./docs/images/demo-overview.png" alt="Kafka Demo Overview" width="738">
+</p>
 
 ## Kafka
 
@@ -80,9 +85,27 @@ Welcome to your kafka demo workshop. In this demo we will try to cover the basic
 
 > ⚠️ If you change the credentials in `.env` the please make to use them ⚠️
 
+## Kafka Broker
+
+Validate the Kafka Broker by running
+
+```bash
+docker exec -it kafkacat kafkacat -b broker:9092 -L
+```
+
 ## Kafka Producer
 
-We will produce message using Kafka connector and Datagen.
+- Produce sample messages to demo topic by running
+
+```bash
+docker exec -it kafkacat kafkacat -b broker:9092 -t demo -P -K~
+1~Iron Man
+2~Ant Man
+3~Spider Man
+4~Avengers
+```
+
+- We will produce more message using Kafka connector and Datagen.
 
 ```json
 {
@@ -131,7 +154,19 @@ GROUP BY GENDER EMIT CHANGES;
 
 ## Kafka Consumer
 
-We will consume message using Kafka connector
+- Consume messages from demo topic by running
+
+```bash
+docker exec -it kafkacat kafkacat -b broker:9092 -t demo -C -o beginning
+
+docker exec -it kafkacat kafkacat -b broker:9092 -t demo -C -o 3
+
+docker exec -it kafkacat kafkacat -b broker:9092 -t demo -o beginning -f 'Topic %t[%p], offset: %o, key: %k, payload: %S bytes: %s\n'
+
+docker exec -it kafkacat kafkacat -b broker:9092 -t demo -o 3 -f 'Topic %t[%p], offset: %o, key: %k, payload: %S bytes: %s\n'
+```
+
+- We will consume message using Kafka connector
 
 ```json
 {
