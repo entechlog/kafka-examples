@@ -1,0 +1,26 @@
+apiVersion: kafka.strimzi.io/v1beta1
+kind: KafkaConnect
+metadata:
+  name: strimzi-connect-cluster-custom-image
+  annotations:
+    strimzi.io/use-connector-resources: "true"
+spec:
+  image: entechlog/strimzi-kafka-connect:2
+  version: 2.6.0
+  replicas: 1
+  bootstrapServers: b-2.entechlog-dev-msk-clu.ywk1n4.c11.kafka.us-east-1.amazonaws.com:9092,b-1.entechlog-dev-msk-clu.ywk1n4.c11.kafka.us-east-1.amazonaws.com:9092
+  config:
+    group.id: strimzi-connect-cluster-custom-image
+    offset.storage.topic: strimzi-connect-cluster-custom-image-offsets
+    config.storage.topic: strimzi-connect-cluster-custom-image-configs
+    status.storage.topic: strimzi-connect-cluster-custom-image-status
+    config.storage.replication.factor: 1
+    offset.storage.replication.factor: 1
+    status.storage.replication.factor: 1
+    config.providers: file
+    config.providers.file.class: org.apache.kafka.common.config.provider.FileConfigProvider
+  externalConfiguration:
+    volumes:
+      - name: connector-config
+        secret:
+          secretName: connect-secrets

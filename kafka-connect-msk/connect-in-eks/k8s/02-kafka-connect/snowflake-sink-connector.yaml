@@ -1,0 +1,20 @@
+apiVersion: kafka.strimzi.io/v1alpha1
+kind: KafkaConnector
+metadata:
+  name: my-favorite-celebrities-sink-snowflake
+  labels:
+    strimzi.io/cluster: strimzi-connect-cluster-custom-image
+spec:
+  class: com.snowflake.kafka.connector.SnowflakeSinkConnector
+  tasksMax: 2
+  config:
+    topics: twitter.my.favorite.celebrities.src
+    snowflake.url.name: ${file:/opt/kafka/external-configuration/connector-config/connect-secrets.properties:SNOWFLAKE_HOST}
+    snowflake.user.name: ${file:/opt/kafka/external-configuration/connector-config/connect-secrets.properties:SNOWFLAKE_USER}
+    snowflake.user.role: SYSADMIN
+    snowflake.private.key: ${file:/opt/kafka/external-configuration/connector-config/connect-secrets.properties:SNOWFLAKE_PRIVATE_KEY}
+    snowflake.database.name: DEMO_DB
+    snowflake.schema.name: PUBLIC
+    key.converter: org.apache.kafka.connect.storage.StringConverter
+    value.converter.schemas.enable: false
+    value.converter: org.apache.kafka.connect.json.JsonConverter

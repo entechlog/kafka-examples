@@ -1,0 +1,34 @@
+{
+  "name" : "snowflake-kafka-connector",
+  "version" : "1.5.1",
+  "title" : "Snowflake Kafka Connector",
+  "description" : "Snowflake is the data warehouse built for the\ncloud. The Snowflake Kafka connector lets you\nquickly and easily move messages in formats\nlike Avro, JSON, and Protobuf from Kafka topics\ninto Snowflake tables.",
+  "owner" : {
+    "username" : "snowflakeinc",
+    "type" : "organization",
+    "name" : "Snowflake, Inc.",
+    "url" : "https://snowflake.com/",
+    "logo" : "assets/snowflake.png"
+  },
+  "support" : {
+    "summary" : "This feature is in preview, and\nprovided primarily for evaluation and testing\npurposes. If you decide to use a preview feature\nin production, please contact Snowflake Support\nbefore doing so.",
+    "provider_name" : "Snowflake, Inc."
+  },
+  "tags" : [ "data warehouse", "database", "rdbms", "Snowflake", "jdbc", "dbms", "sql" ],
+  "features" : {
+    "supported_encodings" : [ "UTF-8" ],
+    "single_message_transforms" : false,
+    "confluent_control_center_integration" : true,
+    "kafka_connect_api" : true
+  },
+  "logo" : "assets/snowflake.png",
+  "documentation_url" : "https://docs.snowflake.net/manuals/user-guide/kafka-connector.html",
+  "source_url" : "https://github.com/snowflakedb/snowflake-kafka-connector",
+  "docker_image" : { },
+  "license" : [ {
+    "name" : "Apache License, Version 2.0",
+    "url" : "http://www.apache.org/licenses/LICENSE-2.0.txt"
+  } ],
+  "component_types" : [ "sink" ],
+  "release_date" : "2020-12-02"
+}

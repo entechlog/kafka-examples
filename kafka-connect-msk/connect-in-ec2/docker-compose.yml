@@ -1,0 +1,64 @@
+---
+version: '3'
+
+services:
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:${CONFLUENT_VERSION_TAG}
+    container_name: kafka-connect
+    ports:
+      - 8083:8083
+    environment:
+      CONNECT_CUB_KAFKA_TIMEOUT: 300
+      CONNECT_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      CONNECT_REST_ADVERTISED_HOST_NAME: 'kafka-connect'
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: kafka-connect-group
+      CONNECT_CONFIG_STORAGE_TOPIC: _kafka-connect-group-configs
+      CONNECT_OFFSET_STORAGE_TOPIC: _kafka-connect-group-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: _kafka-connect-group-status
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: 'false'
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: 'false'
+      CONNECT_INTERNAL_KEY_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
+      CONNECT_INTERNAL_VALUE_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
+      CONNECT_LOG4J_ROOT_LOGLEVEL: 'INFO'
+      CONNECT_LOG4J_LOGGERS: 'org.apache.kafka.connect.runtime.rest=WARN,org.reflections=ERROR'
+      CONNECT_LOG4J_APPENDER_STDOUT_LAYOUT_CONVERSIONPATTERN: "[%d] %p %X{connector.context}%m (%c:%L)%n"
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: '2'
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: '2'
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: '2'
+      CONNECT_PLUGIN_PATH: '/usr/share/java,/usr/share/confluent-hub-components/,/data/connect-jars'
+      # External secrets config
+      # See https://docs.confluent.io/current/connect/security.html#externalizing-secrets
+      CONNECT_CONFIG_PROVIDERS: 'file'
+      CONNECT_CONFIG_PROVIDERS_FILE_CLASS: 'org.apache.kafka.common.config.provider.FileConfigProvider'
+    volumes:
+      - ./kafka-connect/secrets/connect-secrets.properties:/opt/confluent/secrets/connect-secrets.properties
+      - ./kafka-connect/scripts/create-twitter-source.sh:/kafka-connect/scripts/create-twitter-source.sh
+      - ./kafka-connect/scripts/create-snowflake-sink.sh:/kafka-connect/scripts/create-snowflake-sink.sh
+    user: "1000:1000"
+    command: 
+      # In the command section, $ are replaced with $$ to avoid the error 'Invalid interpolation format for "command" option'
+      - bash 
+      - -c 
+      - |
+        echo "===> Installing connector plugins"
+        confluent-hub install --no-prompt jcustenborder/kafka-connect-twitter:${KAFKA_TWITTER_CONNECT_VERSION}
+        confluent-hub install --no-prompt snowflakeinc/snowflake-kafka-connector:${KAFKA_SNOWFLAKE_CONNECT_VERSION}
+        #
+        echo "===> Launching Kafka Connect worker"
+        /etc/confluent/docker/run & 
+        echo "===> Waiting for Kafka Connect to start listening on kafka-connect ⏳"
+        while [ $$(curl -s -o /dev/null -w %{http_code} http://kafka-connect:8083/connectors) -eq 000 ] ; do
+          echo -e $$(date) " Kafka Connect listener HTTP state: " $$(curl -s -o /dev/null -w %{http_code} http://kafka-connect:8083/connectors) " (waiting for 200)"
+          sleep 5
+        done
+        nc -vz kafka-connect 8083
+        sleep 5
+        echo -e "\n ===> Creating Kafka Connector To Source Data from Twitter"
+        /kafka-connect/scripts/create-twitter-source.sh
+        sleep 5
+        echo -e "\n ===> Creating Kafka Connector To Sink Data from Kafka to Snowflake"
+        /kafka-connect/scripts/create-snowflake-sink.sh
+        sleep infinity

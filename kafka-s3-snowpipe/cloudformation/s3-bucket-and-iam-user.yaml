@@ -1,0 +1,108 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create an S3 bucket and IAM user with access to that bucket.
+
+Parameters:
+  IAMUserARN:
+    Description: AWS Account IAM User ARN
+    Default: arn:aws:iam::12345:user/12345
+    Type: String
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Sub ${AWS::StackName}
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Statement:
+        - Action: s3:GetObject
+          Effect: Allow
+          Principal: "*"
+          Resource: !Sub arn:aws:s3:::${S3Bucket}/*
+        - Action: s3:GetObjectVersion
+          Effect: Allow
+          Principal: "*"
+          Resource: !Sub arn:aws:s3:::${S3Bucket}/*
+          
+  S3User:
+    Type: AWS::IAM::User
+    Properties:
+      Policies:
+        - PolicyName: !Sub ${AWS::StackName}-bucket-access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+              - s3:*
+              Resource:
+                - !Sub arn:aws:s3:::${S3Bucket}
+                - !Sub arn:aws:s3:::${S3Bucket}/*
+      UserName: !Sub ${AWS::StackName}-s3-user
+
+  S3UserAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref S3User
+
+  S3BucketRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: 
+              AWS:
+                - Ref: IAMUserARN
+            Action:
+              - "sts:AssumeRole"
+            Condition:
+              StringEquals:
+                sts:ExternalId: '12345'
+      RoleName: !Sub ${AWS::StackName}-readonly
+
+  S3BucketRolePermission:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+        ManagedPolicyName: !Sub ${AWS::StackName}-readonly
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Sid: AllowGet
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+            Effect: Allow
+            Resource: !Sub arn:aws:s3:::${S3Bucket}/*
+          - Sid: AllowList
+            Action:
+              - s3:ListBucket
+            Effect: Allow
+            Resource: !Sub arn:aws:s3:::${S3Bucket}
+        Roles:
+          - !Ref S3BucketRole
+          
+Outputs:
+  BucketName:
+    Value: !Ref S3Bucket
+  User:
+    Value: !GetAtt S3User.Arn
+  AccessKeyID:
+    Value: !Ref S3UserAccessKey
+  SecretAccessKey:
+    Value: !GetAtt S3UserAccessKey.SecretAccessKey
+  BucketRole:
+    Value: !GetAtt S3BucketRole.Arn
+  BucketRolePolicy:
+    Value: !Ref S3BucketRolePermission
+    

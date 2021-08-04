@@ -1,0 +1,180 @@
+---
+version: '3'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:${CONFLUENT_VERSION_TAG}
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  broker:
+    image: confluentinc/cp-enterprise-kafka:${CONFLUENT_VERSION_TAG}
+    hostname: broker
+    container_name: broker
+    depends_on:
+      - zookeeper
+    ports:
+      - "29092:29092"
+      - "39092:39092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,IP_LISTENER:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092,PLAINTEXT_HOST://localhost:29092,IP_LISTENER://192.168.1.78:39092
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_TOPIC_REPLICATION_FACTOR: 1
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:${CONFLUENT_VERSION_TAG}
+    ports:
+      - 8081:8081
+    container_name: schema-registry
+    depends_on:
+      - broker
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://broker:9092
+      SCHEMA_REGISTRY_CUB_KAFKA_TIMEOUT: 300
+    restart: unless-stopped
+
+  kafka-client:
+    image: confluentinc/cp-enterprise-kafka:${CONFLUENT_VERSION_TAG}
+    hostname: kafka-client
+    container_name: kafka-client
+    depends_on:
+      - zookeeper
+      - broker
+    command: "bash -c -a 'echo Waiting for Kafka to be ready... && \
+                       cub kafka-ready -b broker:9092 1 60 && \
+                       sleep 5 && \
+                       set +e && \
+                       kafka-topics --bootstrap-server broker:9092 --topic datagen.xml.user.profile --create --replication-factor 1 --partitions 1 --config cleanup.policy=delete --config delete.retention.ms=100 --config segment.ms=100 --config min.cleanable.dirty.ratio=0.01 && \
+                       set -e && \
+                       echo Waiting a few seconds for topic creation to finish... && \
+                       sleep 5'"
+    environment:
+      # The following settings are listed here only to satisfy the image's requirements.
+      # We override the image's `command` anyways, hence this container will not start a broker.
+      KAFKA_BROKER_ID: ignored
+      KAFKA_ZOOKEEPER_CONNECT: ignored
+      KAFKA_ADVERTISED_LISTENERS: ignored
+      
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:${CONFLUENT_VERSION_TAG}
+    container_name: kafka-connect
+    depends_on:
+      - broker
+      - schema-registry
+      - kafka-client
+    ports:
+      - 8083:8083
+    environment:
+      CONNECT_CUB_KAFKA_TIMEOUT: 300
+      CONNECT_BOOTSTRAP_SERVERS: "broker:9092"
+      CONNECT_REST_ADVERTISED_HOST_NAME: 'kafka-connect'
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: kafka-connect
+      CONNECT_CONFIG_STORAGE_TOPIC: _kafka-connect-configs
+      CONNECT_OFFSET_STORAGE_TOPIC: _kafka-connect-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: _kafka-connect-status
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      CONNECT_INTERNAL_KEY_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
+      CONNECT_INTERNAL_VALUE_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
+      CONNECT_LOG4J_ROOT_LOGLEVEL: 'INFO'
+      CONNECT_LOG4J_LOGGERS: 'org.apache.kafka.connect.runtime.rest=WARN,org.reflections=ERROR'
+      CONNECT_LOG4J_APPENDER_STDOUT_LAYOUT_CONVERSIONPATTERN: "[%d] %p %X{connector.context}%m (%c:%L)%n"
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_PLUGIN_PATH: '/usr/share/java,/usr/share/confluent-hub-components/,/data/connect-jars'
+      # External secrets config
+      # See https://docs.confluent.io/current/connect/security.html#externalizing-secrets
+      CONNECT_CONFIG_PROVIDERS: 'file'
+      CONNECT_CONFIG_PROVIDERS_FILE_CLASS: 'org.apache.kafka.common.config.provider.FileConfigProvider'
+    volumes:
+      - ./kafka-connect/secrets/connect-secrets.properties:/opt/confluent/secrets/connect-secrets.properties
+      - ./kafka-connect/scripts/create-snowflake-sink.sh:/kafka-connect/scripts/create-snowflake-sink.sh
+    user: "1000:1000"
+    command: 
+      # In the command section, $ are replaced with $$ to avoid the error 'Invalid interpolation format for "command" option'
+      - bash 
+      - -c 
+      - |
+        echo "===> Installing connector plugins"
+        confluent-hub install --no-prompt snowflakeinc/snowflake-kafka-connector:${KAFKA_SNOWFLAKE_CONNECT_VERSION}
+        #
+        echo "===> Launching Kafka Connect worker"
+        /etc/confluent/docker/run & 
+        echo "===> Waiting for Kafka Connect to start listening on kafka-connect ⏳"
+        while [ $$(curl -s -o /dev/null -w %{http_code} http://kafka-connect:8083/connectors) -eq 000 ] ; do
+          echo -e $$(date) " Kafka Connect listener HTTP state: " $$(curl -s -o /dev/null -w %{http_code} http://kafka-connect:8083/connectors) " (waiting for 200)"
+          sleep 5
+        done
+        nc -vz kafka-connect 8083
+        #
+        sleep 5
+        echo -e "\n ===> Creating Kafka Connectors"
+        /kafka-connect/scripts/create-snowflake-sink.sh
+        sleep infinity
+        
+  control-center:
+    image: confluentinc/cp-enterprise-control-center:${CONFLUENT_VERSION_TAG}
+    hostname: control-center
+    container_name: control-center
+    depends_on:
+      - zookeeper
+      - broker
+      - schema-registry
+    ports:
+      - "9021:9021"
+    environment:
+      CONTROL_CENTER_BOOTSTRAP_SERVERS: 'broker:9092'
+      CONTROL_CENTER_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      CONTROL_CENTER_KSQL_URL: "http://ksqldb-server:8088"
+      CONTROL_CENTER_KSQL_ADVERTISED_URL: "http://localhost:8088"
+      CONTROL_CENTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      CONTROL_CENTER_CONNECT_CLUSTER: 'http://kafka-connect:8083'
+      CONTROL_CENTER_REPLICATION_FACTOR: 1
+      CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
+      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
+      CONFLUENT_METRICS_TOPIC_REPLICATION: 1
+      PORT: 9021
+
+  kafkacat:
+    image: edenhill/kafkacat:1.6.0
+    container_name: kafkacat
+    entrypoint: 
+      - /bin/sh 
+      - -c 
+      - |
+        apk add jq; 
+        while [ 1 -eq 1 ];do sleep 60;done
+    restart: unless-stopped
+
+  faker-datagen-xml:
+    image: entechlog/faker-datagen-xml
+    container_name: faker-datagen-xml
+    depends_on:
+      - zookeeper
+      - broker
+    build: ./docker/faker/
+    env_file:
+      - .env
+    command: 
+      - bash 
+      - -c 
+      - |
+        echo "Launching faker-datagen-xml"
+        python /usr/src/app/faker-kafka-profile-datagen.py --bootstrap_servers $bootstrap_servers --topic_name $topic_name --no_of_records $no_of_records --loop_delay $loop_delay
+    restart: unless-stopped

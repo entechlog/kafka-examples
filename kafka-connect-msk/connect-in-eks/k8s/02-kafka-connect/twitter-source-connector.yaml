@@ -1,0 +1,21 @@
+apiVersion: kafka.strimzi.io/v1alpha1
+kind: KafkaConnector
+metadata:
+  name: my-favorite-celebrities-src-twitter
+  labels:
+    strimzi.io/cluster: strimzi-connect-cluster-custom-image
+spec:
+  class: com.github.jcustenborder.kafka.connect.twitter.TwitterSourceConnector
+  tasksMax: 2
+  config:
+    twitter.oauth.consumerKey: ${file:/opt/kafka/external-configuration/connector-config/connect-secrets.properties:twitter-api-key}
+    twitter.oauth.consumerSecret: ${file:/opt/kafka/external-configuration/connector-config/connect-secrets.properties:twitter-api-secret-key}
+    twitter.oauth.accessToken: ${file:/opt/kafka/external-configuration/connector-config/connect-secrets.properties:twitter-access-token}
+    twitter.oauth.accessTokenSecret: ${file:/opt/kafka/external-configuration/connector-config/connect-secrets.properties:twitter-access-token-secret}
+    kafka.status.topic: twitter.my.favorite.celebrities.src
+    key.converter: org.apache.kafka.connect.json.JsonConverter
+    key.converter.schemas.enable: false
+    value.converter: org.apache.kafka.connect.json.JsonConverter
+    value.converter.schemas.enable: false
+    process.deletes: false
+    filter.keywords: mohanlal,dhoni,obama

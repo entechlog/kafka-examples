@@ -1,0 +1,17 @@
+---
+version: '3'
+
+services:
+  faker-datagen-xml:
+    image: entechlog/faker-datagen-xml
+    container_name: faker-datagen-xml
+    build: ./docker/faker/
+    env_file:
+      - .env
+    command: 
+      - bash 
+      - -c 
+      - |
+        echo "Launching faker-datagen-xml"
+        python /usr/src/app/faker-datagen.py --s3_prefix $s3_prefix --no_of_records $no_of_records --loop_delay $loop_delay
+    restart: unless-stopped

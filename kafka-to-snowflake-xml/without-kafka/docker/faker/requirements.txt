@@ -1,0 +1,3 @@
+Faker
+json2xml
+boto3

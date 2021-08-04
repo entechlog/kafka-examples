@@ -1,0 +1,7 @@
+kafka-python
+faust
+fastavro
+confluent-kafka
+requests
+avro-python3
+twilio
