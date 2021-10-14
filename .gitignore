@@ -16,3 +16,6 @@ __pycache__
 /kafka-to-apms/.env
 # Superset Demo
 /kafka-postgres-superset/.env
+*.jks
+.env
+
