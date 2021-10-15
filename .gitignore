@@ -18,4 +18,4 @@ __pycache__
 /kafka-postgres-superset/.env
 *.jks
 .env
-
+*snapshot.jar
