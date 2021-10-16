@@ -6,7 +6,7 @@ services:
     image: entechlog/cp-kafka-connect:${CONFLUENT_VERSION_TAG}
     container_name: kafka-connect
     build:
-      context: ./docker/standalone/
+      context: ./docker/
       args:
         CONNECTOR_OWNER: ${CONNECTOR_OWNER}
         CONNECTOR_NAME: ${CONNECTOR_NAME}
@@ -98,7 +98,5 @@ services:
       CONNECT_OFFSET_STORAGE_FILE_FILENAME: /tmp/connect.offsets
 
     volumes:
-      - ./kafka-connect/secrets/connect-secrets.properties:/opt/confluent/secrets/connect-secrets.properties
-      - ./kafka-connect/secrets/:/etc/kafka/secrets/
-      - ./kafka-connect/scripts/create-bigquery-sink.sh:/kafka-connect/scripts/create-bigquery-sink.sh
+      - ./secrets/:/etc/kafka/secrets/
     user: "1000:1000"

@@ -1,4 +1,6 @@
-# Contents
+# Notes
+
+- CamelCased connect variable like `defaultDataset` should be mentioned as `CONNECTOR_CAMELCASE_DEFAULT_DATASET`
 
 # Reference
 - https://docs.confluent.io/platform/current/tutorials/build-your-own-demos.html#standalone-mode
