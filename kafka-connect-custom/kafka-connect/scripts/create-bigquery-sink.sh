@@ -1,9 +1,9 @@
 #!/bin/sh
 
 curl -i -X PUT -H  "Content-Type:application/json" \
-    http://kafka-connect:8083/connectors/MY_FAVORITE_CELEBRITIES_SINK_SNOWFLAKE/config \
+    http://kafka-connect:8083/connectors/demo_sink_bq/config \
     -d '{
-        "connector.class":"com.snowflake.kafka.connector.SnowflakeSinkConnector",
+        "connector.class":"com.wepay.kafka.connect.bigquery.BigQuerySinkConnector",
         "tasks.max":1,
         "topics":"twitter.my.favorite.celebrities.src",
         "snowflake.url.name":"${file:/opt/confluent/secrets/connect-secrets.properties:SNOWFLAKE_HOST}",

@@ -45,7 +45,7 @@ services:
       CLASSPATH: '/etc/kafka/secrets/${CLIENT_JAR}:/etc/kafka/secrets/${COMMON_JAR}'
       # Connect Worker
       CONNECT_SECURITY_PROTOCOL: SASL_SSL
-      CONNECT_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/kafka.connect.truststore.jks
+      CONNECT_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.jks
       # RBAC
       CONNECT_SASL_MECHANISM: 'OAUTHBEARER'
       CONNECT_SASL_LOGIN_CALLBACK_HANDLER_CLASS: ${SASL_LOGIN_CALLBACK_HANDLER_CLASS}
@@ -56,7 +56,7 @@ services:
 
       # Connect Producer
       CONNECT_PRODUCER_SECURITY_PROTOCOL: SASL_SSL
-      CONNECT_PRODUCER_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/kafka.connect.truststore.jks
+      CONNECT_PRODUCER_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.jks
       # Producer
       CONNECT_PRODUCER_SASL_MECHANISM: 'OAUTHBEARER'
       CONNECT_PRODUCER_SASL_LOGIN_CALLBACK_HANDLER_CLASS: ${SASL_LOGIN_CALLBACK_HANDLER_CLASS}
@@ -69,7 +69,7 @@ services:
 
       # Connect Consumer
       CONNECT_CONSUMER_SECURITY_PROTOCOL: SASL_SSL
-      CONNECT_CONSUMER_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/kafka.connect.truststore.jks
+      CONNECT_CONSUMER_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/truststore.jks
       # Consumer
       CONNECT_CONSUMER_SASL_MECHANISM: 'OAUTHBEARER'
       CONNECT_CONSUMER_SASL_LOGIN_CALLBACK_HANDLER_CLASS: ${SASL_LOGIN_CALLBACK_HANDLER_CLASS}
@@ -87,13 +87,14 @@ services:
                   -XX:MaxInlineLevel=15 -Djava.awt.headless=true
 
       # CONNECTOR_ properties are for the connector itself, example shown below
-      CONNECTOR_NAME: elasticsearch-sink-connector
-      CONNECTOR_CONNECTOR_CLASS: io.confluent.connect.elasticsearch.ElasticsearchSinkConnector
-      CONNECTOR_TYPE_NAME: _doc
-      CONNECTOR_TOPICS: test01
+      CONNECTOR_NAME: bq-sink-connector
+      CONNECTOR_CONNECTOR_CLASS: com.wepay.kafka.connect.bigquery.BigQuerySinkConnector
+      CONNECTOR_PROJECT: ${CONNECTOR_PROJECT}
+      CONNECTOR_CAMELCASE_DEFAULT_DATASET: ${CONNECTOR_DEFAULT_DATASET}
+      CONNECTOR_TOPICS: ${CONNECTOR_TOPICS}
       CONNECTOR_KEY_IGNORE: "true"
       CONNECTOR_SCHEMA_IGNORE: "false"
-      CONNECTOR_CONNECTION_URL: http://elasticsearch:9200
+      CONNECTOR_KEYFILE: /tmp/connect.json
       CONNECT_OFFSET_STORAGE_FILE_FILENAME: /tmp/connect.offsets
 
     volumes:
@@ -101,23 +102,3 @@ services:
       - ./kafka-connect/secrets/:/etc/kafka/secrets/
       - ./kafka-connect/scripts/create-bigquery-sink.sh:/kafka-connect/scripts/create-bigquery-sink.sh
     user: "1000:1000"
-    # command: 
-    #   # In the command section, $ are replaced with $$ to avoid the error 'Invalid interpolation format for "command" option'
-    #   - bash 
-    #   - -c 
-    #   - |
-    #     echo "===> Installing connector plugins"
-    #     confluent-hub install --no-prompt wepay/kafka-connect-bigquery:${KAFKA_BIGQUERY_CONNECT_VERSION}
-    #     #
-    #     echo "===> Launching Kafka Connect worker"
-    #     /etc/confluent/docker/run & 
-    #     echo "===> Waiting for Kafka Connect to start listening on kafka-connect ⏳"
-    #     while [ $$(curl -s -o /dev/null -w %{http_code} http://kafka-connect:8083/connectors) -eq 000 ] ; do
-    #       echo -e $$(date) " Kafka Connect listener HTTP state: " $$(curl -s -o /dev/null -w %{http_code} http://kafka-connect:8083/connectors) " (waiting for 200)"
-    #       sleep 5
-    #     done
-    #     nc -vz kafka-connect 8083
-    #     sleep 5
-    #     echo -e "\n ===> Creating Kafka Connector To Sink Data from Kafka to Bigquery"
-    #     #/kafka-connect/scripts/create-bigquery-sink.sh
-    #     sleep infinity
