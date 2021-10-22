@@ -11,9 +11,10 @@ Demo repo to show how to bring up a standalone kafka connector for POC's.
 
 ## How to start standalone connector ?
 
+- This demo repo is configured to use Big Query connector, but can be also updated to use any other connector. For Big Query, create `bq-sink-connector.key` with the credential JSON for BQ
 - Create copy of `.env.template` as `.env` and update the parameters specific for your environment
 - Create copy of `connect.jaas.template` as `connect.jaas` and update the parameters specific for your environment
-- This demo repo is configured to use Big Query connector, but can be also updated to use any other connector
+- Copy any required jar files required for CLASSPATH and update the `.env` with the correct details
 - Bring up the container by running `docker-compose up -d --build`
 - If you get `'bash\r'` error, please run `sudo find . -type f -exec dos2unix {} \;` to do windows to dos conversion
 
