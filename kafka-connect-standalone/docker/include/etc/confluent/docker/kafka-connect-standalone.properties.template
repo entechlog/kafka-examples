@@ -1,0 +1,8 @@
+{% set connect_props = env_to_props('CONNECTOR_', '') -%}
+{% for name, value in connect_props.items() -%}
+{{name}}={{value}}
+{% if  name[:10] == 'camelcase.' %}
+{% set camel_case = name[10:]|replace(".", " ")|title|replace(" ", "") -%}
+{{camel_case[0]|lower}}{{camel_case[1:]}}={{value}}
+{% endif %}
+{% endfor -%}
