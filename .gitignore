@@ -16,3 +16,5 @@ __pycache__
 /kafka-to-apms/.env
 # Superset Demo
 /kafka-postgres-superset/.env
+# gcs Demo
+/kafka-to-gcs/kafka-connect/secrets/connect-secrets.json
