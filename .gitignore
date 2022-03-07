@@ -18,3 +18,8 @@ __pycache__
 /kafka-postgres-superset/.env
 # gcs Demo
 /kafka-to-gcs/kafka-connect/secrets/connect-secrets.json
+*.jks
+.env
+*snapshot.jar
+*.key
+*.jaas
