@@ -1,0 +1,26 @@
+---
+version: '3'
+
+services:
+  kafka-tools:
+    image: entechlog/kafka-tools${KAFKA_TOOLS_VERSION_TAG}
+    container_name: kafka-tools
+    build:
+      context: ./docker/
+    command: 
+      - bash 
+      - -c 
+      - |
+        echo "Launching kafka-tools"
+        sleep infinity
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: /C
+        target: /C
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+    environment:
+      - TZ=Etc/GMT
+      - DOCKER_HOST=unix:///var/run/docker.sock
