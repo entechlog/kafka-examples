@@ -1,0 +1,31 @@
+version: "3.6"
+
+services:
+  ymck:
+    image: entechlog/ymck${YAHOO_YMCK_VERSION_TAG}
+    ports:
+      - "9000:9000"
+    container_name: ymck
+    build:
+      context: ./ymck/docker/
+    command: 
+      - bash 
+      - -c 
+      - |
+        echo "Launching YMCK"
+        /cmak/bin/cmak -Dconfig.file=/ymck/config/application.conf -Dhttp.port=9000 -Dapplication.home=/cmak
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: /C
+        target: /C
+      - type: bind
+        source: ./ymck/
+        target: /ymck/
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+    environment:
+      - TZ=Etc/GMT
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - CONSUMER_PROPERTIES_FILE=/ymck/config/consumer.properties

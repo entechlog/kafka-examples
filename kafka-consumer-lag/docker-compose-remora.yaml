@@ -1,0 +1,40 @@
+version: "3.6"
+
+services:
+
+  zalando-remora:
+    image: entechlog/zalando-remora${REMORA_BURROW_VERSION_TAG}
+    build:
+      context: ./remora/docker/
+    command: 
+      - bash 
+      - -c 
+      - |
+        sbt docker:publishLocal
+        tail -f /dev/null
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: /C
+        target: /C
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+    environment:
+      - TZ=Etc/GMT
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      
+  nginx:
+    image: jwilder/nginx-proxy
+    volumes:
+      - "/var/run/docker.sock:/tmp/docker.sock:ro"
+    ports:
+      - "9000:80"
+
+  remora:
+    image: remora:0.1-SNAPSHOT
+    environment:
+      KAFKA_ENDPOINT: "192.168.0.107:39092"
+      VIRTUAL_HOST: 'localhost'
+    expose:
+      - 9000
