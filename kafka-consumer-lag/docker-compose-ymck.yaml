@@ -29,3 +29,6 @@ services:
       - TZ=Etc/GMT
       - DOCKER_HOST=unix:///var/run/docker.sock
       - CONSUMER_PROPERTIES_FILE=/ymck/config/consumer.properties
+      - ZK_HOSTS=192.168.0.107:2181
+    extra_hosts:
+      - "broker:192.168.0.107"
