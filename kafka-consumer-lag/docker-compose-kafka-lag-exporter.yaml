@@ -25,27 +25,7 @@ services:
       options:
         max-size: "10m"
         max-file: "10"
-  grafana:
-    image: grafana/grafana${GRAFANA_VERSION_TAG}
-    container_name: grafana
-    ports:
-      - "3000:3000"
-    networks:
-      - kafka_lag_exporter_network
-    volumes:
-      - grafana_data:/var/lib/grafana:rw
-      - ./grafana/custom.ini:/etc/grafana/custom.ini:ro
-      - ./grafana/provisioning/:/etc/grafana/provisioning/
-    environment:
-      - GF_PATHS_CONFIG=/etc/grafana/custom.ini
-    restart: always
-    depends_on:
-      - prometheus
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "10"
+
   prometheus:
     container_name: prometheus
     image: prom/prometheus${PROMETHEUS_VERSION_TAG}
@@ -68,3 +48,25 @@ services:
       - '--storage.tsdb.retention.time=24h'
       - '--web.enable-admin-api'
       - '--web.enable-lifecycle'
+
+  grafana:
+    image: grafana/grafana${GRAFANA_VERSION_TAG}
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - kafka_lag_exporter_network
+    volumes:
+      - grafana_data:/var/lib/grafana:rw
+      - ./grafana/custom.ini:/etc/grafana/custom.ini:ro
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    environment:
+      - GF_PATHS_CONFIG=/etc/grafana/custom.ini
+    restart: always
+    depends_on:
+      - prometheus
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "10"

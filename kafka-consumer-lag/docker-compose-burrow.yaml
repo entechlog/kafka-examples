@@ -1,0 +1,41 @@
+version: "3.6"
+
+services:
+  burrow:
+    image: entechlog/burrow${LINKEDIN_BURROW_VERSION_TAG}
+    ports:
+      - "8000:8000"
+    container_name: burrow
+    build:
+      context: ./burrow/docker/
+    command: 
+      - bash 
+      - -c 
+      - |
+        echo "Launching Burrow"
+        /go/bin/Burrow --config-dir /burrow/config/
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: /C
+        target: /C
+      - type: bind
+        source: ./burrow/config/
+        target: /burrow/config/
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+    environment:
+      - TZ=Etc/GMT
+      - DOCKER_HOST=unix:///var/run/docker.sock
+
+  burrow-dashboard:
+    image: joway/burrow-dashboard:latest
+    container_name: burrow-dashboard
+    ports:
+      - 3000:80
+    environment:
+      BURROW_BACKEND: "http://burrow:8000"
+    depends_on:
+      - burrow
+    restart: unless-stopped
