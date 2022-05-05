@@ -39,3 +39,13 @@ scrape_configs:
       - targets: ['192.168.0.107:9308']
         labels:
           instance: 'kafka-exporter:9308'
+
+  - job_name: 'kafka-lag-exporter-from-kube'
+
+    # Override the global default and scrape targets from this job every 5 seconds.
+    scrape_interval: 15s
+
+    static_configs:
+      - targets: ['192.168.0.107:30072']
+        labels:
+          instance: '192.168.0.107:30072'
