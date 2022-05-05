@@ -1,0 +1,51 @@
+version: "3.6"
+
+networks:
+  kafka_lag_exporter_network:
+
+volumes:
+  prometheus_data: {}
+  grafana_data: {}
+
+services:
+
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus${PROMETHEUS_VERSION_TAG}
+    ports:
+      - 9090:9090
+    restart: always
+    networks:
+      - kafka_lag_exporter_network
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.route-prefix=/'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--storage.tsdb.retention.time=24h'
+      - '--web.enable-admin-api'
+      - '--web.enable-lifecycle'
+
+  grafana:
+    image: grafana/grafana${GRAFANA_VERSION_TAG}
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana:rw
+      - ./grafana/custom.ini:/etc/grafana/custom.ini:ro
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    environment:
+      - GF_PATHS_CONFIG=/etc/grafana/custom.ini
+    restart: always
+    depends_on:
+      - prometheus
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "10"
