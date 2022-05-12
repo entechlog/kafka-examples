@@ -26,11 +26,23 @@ RUN apt-get update && \
     ca-certificates && \
     apt-get purge -y --auto-remove
 
+RUN apt install -y build-essential
+
 # Install Kafka Binary
 RUN curl "https://dlcdn.apache.org/kafka/3.1.0/kafka_2.12-3.1.0.tgz" -o /tmp/kafka.tgz
 RUN mkdir /kafka
 RUN tar -xvzf /tmp/kafka.tgz --directory /kafka --strip-components 1
 RUN rm -f /tmp/kafka.tgz
+
+# Install Rust
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install Kafka Topic Analyzer
+ENV USER=root
+RUN cargo install kafka-topic-analyzer
+RUN cp /root/.cargo/bin/kafka-topic-analyzer /usr/bin
+RUN chmod 755 /usr/bin/kafka-topic-analyzer
 
 # Install Python packages
 COPY requirements.txt ./
