@@ -1,0 +1,13 @@
+version: "3.6"
+
+services:
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    restart: always
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=kube-cluster
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=192.168.0.101:30020
+      - KAFKA_CLUSTERS_0_READONLY=true
