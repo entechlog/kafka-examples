@@ -2,6 +2,7 @@
   - [Overview](#overview)
   - [Blog with Demo Instructions](#blog-with-demo-instructions)
   - [References](#references)
+    - [Terraform for MSK cluster](#terraform-for-msk-cluster)
 
 # kafka-examples
 
@@ -21,3 +22,6 @@ This repository contains Kafka examples running in docker for quick demo.
 
 
 ## References
+### Terraform for MSK cluster
+- https://github.com/vinamra1502/terraform-work/tree/main/terraform-module/msk
+- https://www.davidc.net/sites/default/subnets/subnets.html

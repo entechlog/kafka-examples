@@ -22,6 +22,8 @@ RUN apt-get update && \
     nmap \
     gnupg \
     kafkacat \
+    lsb-release \ 
+    alien \
     apt-transport-https \
     ca-certificates && \
     apt-get purge -y --auto-remove
@@ -49,8 +51,13 @@ COPY requirements.txt ./
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install teraform
+RUN wget -qO - terraform.gpg https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/terraform-archive-keyring.gpg
+RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/terraform-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" > /etc/apt/sources.list.d/terraform.list
+RUN apt update
+RUN apt install terraform
+
 # Create ubuntu user 
 RUN useradd -rm -d /home/ubuntu -s /bin/bash -g root -G sudo -u 1001 ubuntu 
 USER ubuntu
 WORKDIR /home/ubuntu
-
