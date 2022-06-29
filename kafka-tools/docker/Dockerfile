@@ -57,6 +57,10 @@ RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/t
 RUN apt update
 RUN apt install terraform
 
+# Install Java
+RUN apt install -y default-jre
+RUN apt install -y default-jdk
+
 # Create ubuntu user 
 RUN useradd -rm -d /home/ubuntu -s /bin/bash -g root -G sudo -u 1001 ubuntu 
 USER ubuntu

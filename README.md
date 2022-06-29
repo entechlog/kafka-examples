@@ -24,4 +24,6 @@ This repository contains Kafka examples running in docker for quick demo.
 ## References
 ### Terraform for MSK cluster
 - https://github.com/vinamra1502/terraform-work/tree/main/terraform-module/msk
+- https://github.com/msfidelis/aws-msk-glue-kafka-setup
+- https://search.maven.org/artifact/org.mongodb.kafka/mongo-kafka-connect/1.7.0/jar
 - https://www.davidc.net/sites/default/subnets/subnets.html

@@ -12,6 +12,11 @@ Terraform template to create Kafka cluster with different managed service provid
   docker-compose up -d --build
   ```
 
+- Create AWS profile by running
+  ```bash
+  aws configure --profile terraform
+  ```
+
 - Create resources by running   
   ```bash
   terraform apply

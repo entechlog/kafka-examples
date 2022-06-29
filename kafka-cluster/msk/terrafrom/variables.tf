@@ -1,84 +1,90 @@
-// Cluster
+variable "env_code" {
+  default = "dev"
+}
+
 variable "cluster_name" {
-  type        = string
-  description = "(Required) Name of the MSK cluster"
+  default = "msk-cluster"
 }
 
-variable "kafka_version" {
-  type        = string
-  description = "(Required) Specify the desired Kafka software version"
-}
-
-variable "number_of_broker_nodes" {
-  type        = number
-  description = "(Required) The desired total number of broker nodes in the kafka cluster"
-}
-
-variable "enhanced_monitoring" {
-  type        = string
-  description = "(Optional) Specify the desired enhanced MSK CloudWatch monitoring level"
-}
-
-variable "prometheus_jmx_exporter" {
-  type        = string
-  description = "(Optional) Configuration block for JMX Exporter"
-}
-
-variable "prometheus_node_exporter" {
-  type        = string
-  description = "(Optional) Configuration block for Node Exporter"
-}
-
-variable "client_authentication" {
-  type = list(any)
-}
-
-// Broker
-variable "instance_type" {
-  type        = string
-  description = "(Required) Specify the instance type to use for the kafka"
-}
-
-variable "volume_size" {
-  type        = string
-  description = "(Optional) The size in GiB of the EBS volume for the data drive on each broker node"
+variable "aws_region" {
+  default = "us-east-1"
 }
 
 variable "vpc_id" {
+  default = ""
+}
+
+variable "vpc_subnets" {
+  default = [""]
+}
+
+variable "kafka_version" {
+  default = "3.2.0"
+}
+
+variable "brokers_count" {
+  default = 3
+}
+
+variable "broker_instance_type" {
+  default = "kafka.t3.small"
+}
+
+variable "broker_ebs_volume_size" {
+  default = 100
+}
+
+variable "kafka_unauthenticated_access_enabled" {
+  default = true
+}
+
+variable "kafka_sasl_scram_auth_enabled" {
+  default = true
+}
+
+variable "kafka_sasl_iam_auth_enabled" {
+  default = true
+}
+
+variable "kafka_sasl_scram_auth_configs" {
+  default = {
+    username = "foo",
+    password = "uswgbhdaubhdaiubhdhauvdea"
+  }
+  sensitive = true
+}
+
+variable "open_monitoring" {
+  default = true
+}
+
+variable "tags" {
+  default = {
+    Owner = "Entechlog"
+  }
+}
+
+// Sensitive
+
+variable "mongodbdb_uri" {
+  description = "MongoDB database uri"
   type        = string
-  description = ""
 }
 
-variable "subnet_id" {
-  type        = list(string)
-  description = ""
-}
-
-variable "access_allowed_cidr" {
-  type        = list(string)
-  description = ""
-}
-
-variable "encryption_in_transit_client_broker" {
+variable "mongodb_username" {
+  description = "MongoDB database username"
   type        = string
-  description = "(Optional) Encryption setting for data in transit between clients and brokers. Valid values: TLS, TLS_PLAINTEXT, and PLAINTEXT"
+  sensitive   = true
 }
 
-// Tags
-
-variable "Owner" {
+variable "mongodbdb_password" {
+  description = "MongoDB database password"
   type        = string
-  description = ""
-}
-variable "env_code" {
-  type        = string
-  description = ""
-}
-variable "Component" {
-  type        = string
-  description = ""
+  sensitive   = true
 }
 
-variable "server_properties" {
-  type = map(string)
+variable "mongodb_vpce_service_name" {
+  description = "MongoDB Atlas Endpoint Service	Name"
+  type        = string
+  sensitive   = true
 }
