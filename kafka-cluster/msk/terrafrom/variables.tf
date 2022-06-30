@@ -10,12 +10,36 @@ variable "aws_region" {
   default = "us-east-1"
 }
 
-variable "vpc_id" {
+variable "use_current_vpc" {
+  default = true
+}
+
+variable "current_vpc_id" {
   default = ""
 }
 
-variable "vpc_subnets" {
+variable "current_vpc_subnets" {
   default = [""]
+}
+
+variable "vpc_cidr_block" {
+  description = "Specify the vpc CIDR block"
+  type        = string
+  default     = "172.32.0.0/16"
+}
+
+variable "private_subnet_cidr_block" {
+  type        = list(any)
+  description = "CIDR block for Private Subnet"
+  default     = ["172.32.0.0/22", "172.32.4.0/22", "172.32.8.0/22"]
+}
+
+variable "public_subnet_cidr_block" {
+  default = "172.32.12.0/22"
+}
+
+variable "public_subnet_availability_zone" {
+  default = "us-east-1a"
 }
 
 variable "kafka_version" {
@@ -64,8 +88,7 @@ variable "tags" {
   }
 }
 
-// Sensitive
-
+// MongoDB
 variable "mongodbdb_uri" {
   description = "MongoDB database uri"
   type        = string
@@ -85,6 +108,30 @@ variable "mongodbdb_password" {
 
 variable "mongodb_vpce_service_name" {
   description = "MongoDB Atlas Endpoint Service	Name"
+  type        = string
+  sensitive   = true
+}
+
+// Snowflake
+variable "snowflake_url_name" {
+  description = "Snowflake database uri"
+  type        = string
+}
+
+variable "snowflake_user_name" {
+  description = "Snowflake database username"
+  type        = string
+  sensitive   = true
+}
+
+variable "snowflake_private_key" {
+  description = "Snowflake private key"
+  type        = string
+  sensitive   = true
+}
+
+variable "snowflake_private_key_passphrase" {
+  description = "Snowflake private key passphrase"
   type        = string
   sensitive   = true
 }

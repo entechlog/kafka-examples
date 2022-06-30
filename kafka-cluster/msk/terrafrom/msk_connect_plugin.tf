@@ -46,3 +46,23 @@ resource "aws_mskconnect_custom_plugin" "datagen" {
     }
   }
 }
+
+// Snowflake Connector
+
+resource "aws_s3_object" "snowflake" {
+  bucket = aws_s3_bucket.kafka_plugin.id
+  key    = "connect/plugins/snowflake-kafka-connector-1.8.0.zip"
+  source = "./connect/plugins/snowflake-kafka-connector-1.8.0.zip"
+}
+
+resource "aws_mskconnect_custom_plugin" "snowflake" {
+  name         = "snowflake-1-8-0"
+  content_type = "ZIP"
+  location {
+    s3 {
+      bucket_arn     = aws_s3_bucket.kafka_plugin.arn
+      file_key       = aws_s3_object.snowflake.key
+      object_version = "null"
+    }
+  }
+}
