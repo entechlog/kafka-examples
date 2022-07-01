@@ -12,7 +12,7 @@ resource "aws_msk_cluster" "main" {
       }
     }
 
-    client_subnets = var.current_vpc_subnets
+    client_subnets = aws_subnet.private_subnet.*.id
     security_groups = [
       aws_security_group.sg.id
     ]

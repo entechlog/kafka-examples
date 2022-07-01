@@ -1,6 +1,3 @@
-current_vpc_id            = "your-vpc-for-msk"
-current_vpc_subnets       = ["your-subnets-for-msk"]
-public_subnet_cidr_block  = "172.31.96.0/20"
 mongodbdb_uri             = "your-private-link-mongodb-uri"
 mongodb_username          = ""
 mongodbdb_password        = ""

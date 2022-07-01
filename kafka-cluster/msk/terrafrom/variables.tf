@@ -10,16 +10,8 @@ variable "aws_region" {
   default = "us-east-1"
 }
 
-variable "use_current_vpc" {
-  default = true
-}
-
-variable "current_vpc_id" {
-  default = ""
-}
-
-variable "current_vpc_subnets" {
-  default = [""]
+variable "availability_zone" {
+  default = ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1e", "us-east-1f"]
 }
 
 variable "vpc_cidr_block" {
@@ -30,16 +22,13 @@ variable "vpc_cidr_block" {
 
 variable "private_subnet_cidr_block" {
   type        = list(any)
-  description = "CIDR block for Private Subnet"
+  description = "CIDR block for private Subnet"
   default     = ["172.32.0.0/22", "172.32.4.0/22", "172.32.8.0/22"]
 }
 
 variable "public_subnet_cidr_block" {
-  default = "172.32.12.0/22"
-}
-
-variable "public_subnet_availability_zone" {
-  default = "us-east-1a"
+  description = "CIDR block for public Subnet"
+  default     = ["172.32.12.0/22"]
 }
 
 variable "kafka_version" {

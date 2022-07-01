@@ -51,7 +51,7 @@ resource "aws_mskconnect_connector" "tgt_snowflake_datagen" {
 
       vpc {
         security_groups = [aws_security_group.sg.id]
-        subnets         = var.current_vpc_subnets
+        subnets         = aws_subnet.private_subnet.*.id
       }
     }
   }

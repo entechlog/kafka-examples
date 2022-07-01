@@ -1,8 +1,8 @@
 resource "aws_subnet" "private_subnet" {
-  vpc_id                  = var.use_current_vpc == true ? var.current_vpc_id : aws_vpc.data[0].id
-  count                   = var.use_current_vpc == true ? 0 : 1
+  vpc_id                  = aws_vpc.data.id
+  count                   = length(var.private_subnet_cidr_block)
   cidr_block              = element(var.private_subnet_cidr_block, count.index)
-  availability_zone       = data.aws_availability_zones.available.names[count.index]
+  availability_zone       = element(var.availability_zone, count.index)
   map_public_ip_on_launch = false
 
   tags = var.tags
@@ -13,9 +13,10 @@ resource "aws_subnet" "private_subnet" {
 
 /* Public subnet */
 resource "aws_subnet" "public_subnet" {
-  vpc_id                  = var.use_current_vpc == true ? var.current_vpc_id : aws_vpc.data[0].id
-  cidr_block              = var.public_subnet_cidr_block
-  availability_zone       = var.public_subnet_availability_zone
+  vpc_id                  = aws_vpc.data.id
+  count                   = length(var.public_subnet_cidr_block)
+  cidr_block              = element(var.public_subnet_cidr_block, count.index)
+  availability_zone       = element(var.availability_zone, count.index)
   map_public_ip_on_launch = true
   tags = {
     Name        = "${lower(var.env_code)}-${lower(var.cluster_name)}-public-subnet"
@@ -25,7 +26,7 @@ resource "aws_subnet" "public_subnet" {
 
 /* Internet gateway for the public subnet */
 resource "aws_internet_gateway" "ig" {
-  vpc_id = var.use_current_vpc == true ? var.current_vpc_id : aws_vpc.data[0].id
+  vpc_id = aws_vpc.data.id
   tags = {
     Name        = "${var.env_code}-igw"
     Environment = "${upper(var.env_code)}"
@@ -51,7 +52,7 @@ resource "aws_nat_gateway" "nat" {
 
 /* Routing table for public subnet */
 resource "aws_route_table" "public" {
-  vpc_id = var.use_current_vpc == true ? var.current_vpc_id : aws_vpc.data[0].id
+  vpc_id = aws_vpc.data.id
   tags = {
     Name        = "${var.env_code}-public-route-table"
     Environment = "${upper(var.env_code)}"
@@ -60,7 +61,7 @@ resource "aws_route_table" "public" {
 
 /* Routing table for private subnet */
 resource "aws_route_table" "private" {
-  vpc_id = var.use_current_vpc == true ? var.current_vpc_id : aws_vpc.data[0].id
+  vpc_id = aws_vpc.data.id
   tags = {
     Name        = "${var.env_code}-private-route-table"
     Environment = "${upper(var.env_code)}"
@@ -68,7 +69,7 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_main_route_table_association" "private" {
-  vpc_id         = var.use_current_vpc == true ? var.current_vpc_id : aws_vpc.data[0].id
+  vpc_id         = aws_vpc.data.id
   route_table_id = aws_route_table.private.id
 }
 

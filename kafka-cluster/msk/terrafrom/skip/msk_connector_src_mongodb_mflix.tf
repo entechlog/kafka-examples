@@ -39,7 +39,7 @@ resource "aws_mskconnect_connector" "src_mongodb_mflix" {
 
       vpc {
         security_groups = [aws_security_group.sg.id]
-        subnets         = var.current_vpc_subnets
+        subnets         = aws_subnet.private_subnet.*.id
       }
     }
   }

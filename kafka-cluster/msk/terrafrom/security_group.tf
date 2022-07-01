@@ -1,6 +1,6 @@
 resource "aws_security_group" "sg" {
   name   = var.cluster_name
-  vpc_id = var.use_current_vpc == true ? var.current_vpc_id : aws_vpc.data[0].id
+  vpc_id = aws_vpc.data.id
   tags   = var.tags
 }
 
