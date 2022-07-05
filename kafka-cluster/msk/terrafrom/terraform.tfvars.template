@@ -1,0 +1,8 @@
+mongodbdb_uri             = "your-private-link-mongodb-uri"
+mongodb_username          = ""
+mongodbdb_password        = ""
+mongodb_vpce_service_name = ""
+snowflake_url_name               = ""
+snowflake_user_name              = ""
+snowflake_private_key            = ""
+snowflake_private_key_passphrase = ""

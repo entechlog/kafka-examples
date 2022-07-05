@@ -1,7 +1,6 @@
 - [kafka-examples](#kafka-examples)
   - [Overview](#overview)
   - [Blog with Demo Instructions](#blog-with-demo-instructions)
-  - [References](#references)
 
 # kafka-examples
 
@@ -18,6 +17,3 @@ This repository contains Kafka examples running in docker for quick demo.
 - [Kafka - Superset Demo](/kafka-postgres-superset/README.md)
 - [Kafka - Consumer Lag](https://www.entechlog.com/blog/kafka/monitoring-kafka-consumer-lag/)
 - [Kafka - Integrating Kafka Connect With Amazon Managed Streaming For Apache Kafka (MSK)](https://www.entechlog.com/blog/kafka/integrating-kafka-connect-with-msk/)
-
-
-## References
