@@ -1,0 +1,8 @@
+# Kafka clients (latest versions)
+confluent-kafka==2.11.0
+
+# Database connectivity  
+psycopg2-binary==2.9.9
+
+# Utilities
+requests==2.32.3
