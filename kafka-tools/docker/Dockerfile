@@ -1,4 +1,3 @@
-# Dockerfile
 FROM python:3.9-slim-buster
 
 # Install Java
@@ -8,12 +7,14 @@ RUN update-alternatives --install /usr/bin/java java /usr/local/openjdk-8/bin/ja
 
 WORKDIR /usr/app
 
+# Set environment variable to avoid debconf warnings
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Install Linux Packages
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
     wget \
-    snapd \
     git \
     curl \
     sshpass \
@@ -25,43 +26,49 @@ RUN apt-get update && \
     lsb-release \ 
     alien \
     apt-transport-https \
-    ca-certificates && \
-    apt-get purge -y --auto-remove
-
-RUN apt install -y build-essential
+    ca-certificates \
+    unzip \
+    build-essential \
+    default-jre \
+    default-jdk && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Kafka Binary
-RUN curl "https://dlcdn.apache.org/kafka/3.1.0/kafka_2.12-3.1.0.tgz" -o /tmp/kafka.tgz
-RUN mkdir /kafka
-RUN tar -xvzf /tmp/kafka.tgz --directory /kafka --strip-components 1
-RUN rm -f /tmp/kafka.tgz
+ENV KAFKA_VERSION=4.0.0
+ENV SCALA_VERSION=2.13
+ENV KAFKA_HOME=/kafka
+
+RUN curl -fsSL "https://dlcdn.apache.org/kafka/${KAFKA_VERSION}/kafka_${SCALA_VERSION}-${KAFKA_VERSION}.tgz" -o /tmp/kafka.tgz \
+ && mkdir -p ${KAFKA_HOME} \
+ && tar -xzf /tmp/kafka.tgz --directory ${KAFKA_HOME} --strip-components 1 \
+ && rm -f /tmp/kafka.tgz
 
 # Install Rust
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install Kafka Topic Analyzer
 ENV USER=root
-RUN cargo install kafka-topic-analyzer
-RUN cp /root/.cargo/bin/kafka-topic-analyzer /usr/bin
-RUN chmod 755 /usr/bin/kafka-topic-analyzer
+RUN cargo install kafka-topic-analyzer && \
+    cp /root/.cargo/bin/kafka-topic-analyzer /usr/bin && \
+    chmod 755 /usr/bin/kafka-topic-analyzer
 
 # Install Python packages
 COPY requirements.txt ./
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Install teraform
-RUN wget -qO - terraform.gpg https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/terraform-archive-keyring.gpg
-RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/terraform-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" > /etc/apt/sources.list.d/terraform.list
-RUN apt update
-RUN apt install terraform
-
-# Install Java
-RUN apt install -y default-jre
-RUN apt install -y default-jdk
+# Install Terraform directly from binary
+ENV TERRAFORM_VERSION=1.11.2
+RUN curl -fsSL "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip" -o /tmp/terraform.zip \
+    && unzip /tmp/terraform.zip -d /usr/local/bin \
+    && rm /tmp/terraform.zip \
+    && chmod +x /usr/local/bin/terraform
 
 # Create ubuntu user 
-RUN useradd -rm -d /home/ubuntu -s /bin/bash -g root -G sudo -u 1001 ubuntu 
+RUN useradd -rm -d /home/ubuntu -s /bin/bash -g root -G sudo -u 1001 ubuntu && \
+    echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+
 USER ubuntu
 WORKDIR /home/ubuntu

@@ -1,0 +1,305 @@
+services:
+  # =============================================================================
+  # CORE KAFKA INFRASTRUCTURE
+  # =============================================================================
+  
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - kafka-network
+
+  kafka:
+    #image: confluentinc/cp-kafka:7.4.0
+    image: confluentinc/cp-server:7.4.0
+    hostname: kafka
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9101:9101"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_DELETE_TOPIC_ENABLE: 'true'
+      # --- Enable Confluent Metrics Reporter (CP 7.4) ---
+      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
+      KAFKA_CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: 'kafka:29092'   # or your separate metrics cluster
+      KAFKA_CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1                  # since this is a 1-broker demo
+      # Optional (defaults shown):
+      # KAFKA_CONFLUENT_METRICS_REPORTER_TOPIC: _confluent-metrics
+      # KAFKA_CONFLUENT_METRICS_REPORTER_PUBLISH_MS: 15000
+      # KAFKA_CONFLUENT_METRICS_REPORTER_TOPIC_MAX_MESSAGE_BYTES: 10485760
+    networks:
+      - kafka-network
+    healthcheck:
+      test: kafka-broker-api-versions --bootstrap-server kafka:29092
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.4.0
+    hostname: schema-registry
+    container_name: schema-registry
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'kafka:29092'
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    networks:
+      - kafka-network
+
+  # Control Center - Enterprise features, great for demos
+  control-center:
+    image: confluentinc/cp-enterprise-control-center:7.4.0
+    hostname: control-center
+    container_name: control-center
+    depends_on:
+      kafka:
+        condition: service_healthy
+      kafka-connect:
+        condition: service_healthy
+    ports:
+      - "9021:9021"
+    environment:
+      CONTROL_CENTER_BOOTSTRAP_SERVERS: 'kafka:29092'
+      CONTROL_CENTER_CONNECT_DEFAULT_CLUSTER: 'http://kafka-connect:8083'
+      CONTROL_CENTER_CONNECT_DEFAULT_CLUSTER_NAME: 'default'
+      CONTROL_CENTER_CONNECT_HEALTHCHECK_ENDPOINT: '/connectors'
+      CONTROL_CENTER_KSQL_KSQLDB_URL: "http://ksqldb-server:8088"
+      CONTROL_CENTER_KSQL_KSQLDB_ADVERTISED_URL: "http://localhost:8088"
+      CONTROL_CENTER_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      CONTROL_CENTER_REPLICATION_FACTOR: 1
+      CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
+      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
+      CONFLUENT_METRICS_TOPIC_REPLICATION: 1
+      CONTROL_CENTER_STREAMS_NUM_STREAM_THREADS: 2
+      CONTROL_CENTER_STREAMS_CACHE_MAX_BYTES_BUFFERING: 100000000
+      PORT: 9021
+    networks:
+      - kafka-network
+
+  # =============================================================================
+  # KAFKA CONNECT & KSQLDB
+  # =============================================================================
+
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:7.4.0
+    hostname: kafka-connect
+    container_name: kafka-connect
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_started
+    ports:
+      - "8083:8083"
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: 'kafka:29092'
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+      CONNECT_GROUP_ID: kafka-connect
+      CONNECT_CONFIG_STORAGE_TOPIC: _kafka-connect-configs
+      CONNECT_OFFSET_STORAGE_TOPIC: _kafka-connect-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: _kafka-connect-status
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: false
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
+      # Logging
+      CONNECT_LOG4J_ROOT_LOGLEVEL: "INFO"
+      CONNECT_LOG4J_LOGGERS: "org.apache.kafka.connect.runtime.rest=WARN,org.reflections=ERROR"
+    volumes:
+      - ./connectors:/tmp/connectors
+      - ./data:/tmp/data
+    networks:
+      - kafka-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/connectors"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    command:
+      - bash
+      - -c
+      - |
+        echo "🔧 Installing connector plugins..."
+        confluent-hub install --no-prompt confluentinc/kafka-connect-datagen:0.6.3
+        confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.7.4
+        
+        echo "🚀 Starting Kafka Connect..."
+        /etc/confluent/docker/run &
+        
+        # Wait for Kafka Connect to be ready
+        echo "⏳ Waiting for Kafka Connect to start..."
+        while [ $$(curl -s -o /dev/null -w %{http_code} http://localhost:8083/connectors) -ne 200 ] ; do
+          echo "Kafka Connect not ready yet, waiting..."
+          sleep 5
+        done
+        
+        echo "✅ Kafka Connect is ready!"
+        
+        # Make script executable and run it
+        chmod +x /tmp/connectors/create-connectors.sh
+        /tmp/connectors/create-connectors.sh
+        
+        # Keep container running
+        wait
+
+  ksqldb-server:
+    image: confluentinc/ksqldb-server:0.29.0
+    hostname: ksqldb-server
+    container_name: ksqldb-server
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8088:8088"
+    environment:
+      KSQL_LISTENERS: http://0.0.0.0:8088
+      KSQL_BOOTSTRAP_SERVERS: kafka:29092
+      KSQL_KSQL_SCHEMA_REGISTRY_URL: "http://schema-registry:8081"
+      KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: "true"
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: "true"
+    networks:
+      - kafka-network
+
+  ksqldb-cli:
+    image: confluentinc/ksqldb-cli:0.29.0
+    container_name: ksqldb-cli
+    depends_on:
+      - ksqldb-server
+    entrypoint: /bin/sh
+    tty: true
+    networks:
+      - kafka-network
+
+  # =============================================================================
+  # DATABASES & TOOLS
+  # =============================================================================
+
+  postgres:
+    image: postgres:17.5
+    hostname: postgres
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: kafka_demo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - kafka-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # pgAdmin - Web UI for PostgreSQL
+  pgadmin:
+    image: dpage/pgadmin4:9.6
+    hostname: pgadmin
+    container_name: pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@kafka-workshop.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json
+    depends_on:
+      - postgres
+    networks:
+      - kafka-network
+
+  # kcat for CLI demos
+  kcat:
+    image: edenhill/kcat:1.7.1
+    container_name: kcat
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - kafka-network
+    entrypoint: 
+      - /bin/sh 
+      - -c 
+      - |
+        echo "kcat ready! Try: docker exec kcat kcat -b kafka:29092 -L"
+        tail -f /dev/null
+
+  # =============================================================================
+  # PYTHON DEVELOPMENT ENVIRONMENT
+  # =============================================================================
+  
+  python-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: python-dev
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./python-examples:/app/python-examples
+      - ./data:/app/data
+    working_dir: /app
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: kafka_demo
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    networks:
+      - kafka-network
+    entrypoint: 
+      - /bin/sh 
+      - -c 
+      - |
+        echo "🐍 Python environment ready!"
+        echo "📦 Available examples:"
+        echo "  docker exec python-dev python python-examples/01_simple_producer.py"
+        echo "  docker exec python-dev python python-examples/02_simple_consumer.py"
+        echo "  docker exec python-dev python python-examples/03_keys_producer.py"
+        echo "  docker exec python-dev python python-examples/04_consumer_groups.py"
+        echo "  docker exec python-dev python python-examples/05_advanced_producer.py"
+        echo "  docker exec python-dev bash  # Interactive shell"
+        sleep infinity
+
+networks:
+  kafka-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  pgadmin_data:

@@ -61,3 +61,6 @@ terraform.rc
 
 # Other Terraform files
 .terraform.lock.hcl
+
+# node
+node_modules/
